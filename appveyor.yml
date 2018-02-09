@@ -1,0 +1,45 @@
+version: "{build}"
+
+branches:
+  only:
+    - windows
+
+image:
+- Visual Studio 2015
+
+clone_folder: c:\gopath\src\github.com\omniscale\imposm3
+
+environment:
+  global:
+    MINGW64PATH: C:\mingw-w64\x86_64-7.2.0-posix-seh-rt_v5-rev1\mingw64
+    GOPATH: c:\gopath
+    CGO_CFLAGS: -I C:\temp\geos-3.6.2_x64\Library\include -I C:\temp\leveldb-1.20_x64\Library\include
+    CGO_LDFLAGS: -L C:\temp\geos-3.6.2_x64\Library\lib -L C:\temp\leveldb-1.20_x64\Library\lib
+      
+install:
+  - ps: mkdir C:\temp | out-null
+  - ps: if (!(Test-Path "C:\temp\geos-3.6.2_x64.tar.bz2")){(new-object net.webclient).DownloadFile("https://anaconda.org/anaconda/geos/3.6.2/download/win-64/geos-3.6.2-h9ef7328_2.tar.bz2", "C:\temp\geos-3.6.2_x64.tar.bz2")}
+  - ps: if (!(Test-Path "C:\temp\leveldb-1.20_x64.tar.bz2")){(new-object net.webclient).DownloadFile("https://anaconda.org/anaconda/leveldb/1.20/download/win-64/leveldb-1.20-h6538335_1.tar.bz2", "C:\temp\leveldb-1.20_x64.tar.bz2")}
+  - 7z x -y C:\temp\geos-3.6.2_x64.tar.bz2 -oC:\temp\ > $null
+  - 7z x -y C:\temp\geos-3.6.2_x64.tar -oC:\temp\geos-3.6.2_x64 > $null
+  - 7z x -y C:\temp\leveldb-1.20_x64.tar.bz2 -oC:\temp\ > $null
+  - 7z x -y C:\temp\leveldb-1.20_x64.tar -oC:\temp\leveldb-1.20_x64 > $null
+  - echo %PATH%
+  - echo %GOPATH%
+  - set PATH=%GOPATH%\bin;%MINGW64PATH%\bin;%PATH%
+  - ps: go version
+  - ps: go env
+build_script:
+  - go install github.com/omniscale/imposm3/cmd/imposm3
+
+after_build:
+  - 7z a imposm3-windows_x64.zip C:\temp\geos-3.6.2_x64\Library\bin\*.dll > $null
+  - 7z a imposm3-windows_x64.zip C:\temp\leveldb-1.20_x64\Library\bin\leveldb.dll > $null
+  - 7z a imposm3-windows_x64.zip %GOPATH%\bin\imposm3.exe > $null
+
+artifacts:
+  - path: imposm3-windows_x64.zip
+  
+cache:
+  - C:\temp\geos-3.6.2_x64.tar.bz2 -> appveyor.yml
+  - C:\temp\leveldb-1.20_x64.tar.bz2 -> appveyor.yml
